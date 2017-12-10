@@ -3,7 +3,7 @@
 System.register(['lodash', 'jquery', 'moment', '../datasource-zabbix/utils', 'app/plugins/sdk', './options_tab', './triggers_tab', './migrations'], function (_export, _context) {
   "use strict";
 
-  var _, $, moment, utils, PanelCtrl, triggerPanelOptionsTab, triggerPanelTriggersTab, migratePanelSchema, _createClass, ZABBIX_DS_ID, DEFAULT_TARGET, DEFAULT_SEVERITY, DEFAULT_TIME_FORMAT, PANEL_DEFAULTS, triggerStatusMap, TriggerPanelCtrl;
+  var _, $, moment, utils, PanelCtrl, triggerPanelOptionsTab, triggerPanelTriggersTab, migratePanelSchema, _createClass, _get, ZABBIX_DS_ID, DEFAULT_TARGET, DEFAULT_SEVERITY, DEFAULT_TIME_FORMAT, PANEL_DEFAULTS, triggerStatusMap, TriggerPanelCtrl;
 
   function _classCallCheck(instance, Constructor) {
     if (!(instance instanceof Constructor)) {
@@ -83,6 +83,31 @@ System.register(['lodash', 'jquery', 'moment', '../datasource-zabbix/utils', 'ap
         };
       }();
 
+      _get = function get(object, property, receiver) {
+        if (object === null) object = Function.prototype;
+        var desc = Object.getOwnPropertyDescriptor(object, property);
+
+        if (desc === undefined) {
+          var parent = Object.getPrototypeOf(object);
+
+          if (parent === null) {
+            return undefined;
+          } else {
+            return get(parent, property, receiver);
+          }
+        } else if ("value" in desc) {
+          return desc.value;
+        } else {
+          var getter = desc.get;
+
+          if (getter === undefined) {
+            return undefined;
+          }
+
+          return getter.call(receiver);
+        }
+      };
+
       ZABBIX_DS_ID = 'alexanderzobnin-zabbix-datasource';
 
       _export('DEFAULT_TARGET', DEFAULT_TARGET = {
@@ -146,6 +171,7 @@ System.register(['lodash', 'jquery', 'moment', '../datasource-zabbix/utils', 'ap
           _this.templateSrv = templateSrv;
           _this.contextSrv = contextSrv;
           _this.dashboardSrv = dashboardSrv;
+          _this.scope = $scope;
 
           _this.editorTabIndex = 1;
           _this.triggerStatusMap = triggerStatusMap;
@@ -232,7 +258,6 @@ System.register(['lodash', 'jquery', 'moment', '../datasource-zabbix/utils', 'ap
 
               // Limit triggers number
               _this3.triggerList = triggerList.slice(0, _this3.panel.limit);
-              _this3.getCurrentTriggersPage();
               _this3.render(_this3.triggerList);
             }).catch(function (err) {
               // if cancelled  keep loading set to true
@@ -256,6 +281,23 @@ System.register(['lodash', 'jquery', 'moment', '../datasource-zabbix/utils', 'ap
               _this3.events.emit('data-error', err);
               console.log('Panel data error:', err);
             });
+          }
+        }, {
+          key: 'render',
+          value: function render(triggerList) {
+            var triggers = this.triggerList;
+
+            if (triggerList) {
+              triggers = _.map(triggers, this.formatTrigger.bind(this));
+            } else {
+              triggers = _.map(triggers, this.updateTriggerFormat.bind(this));
+            }
+            triggers = this.sortTriggers(triggers);
+            this.triggerList = triggers;
+            this.getCurrentTriggersPage();
+            // this.scope.$digest();
+
+            return _get(TriggerPanelCtrl.prototype.__proto__ || Object.getPrototypeOf(TriggerPanelCtrl.prototype), 'render', this).call(this, this.triggerList);
           }
         }, {
           key: 'getTriggers',
@@ -516,13 +558,16 @@ System.register(['lodash', 'jquery', 'moment', '../datasource-zabbix/utils', 'ap
             function setFontSize() {
               var fontSize = parseInt(panel.fontSize.slice(0, panel.fontSize.length - 1));
               var triggerCardElem = elem.find('.card-item-wrapper');
+              console.log(fontSize);
               if (fontSize && fontSize !== 100) {
                 triggerCardElem.find('.alert-list-icon').css({ 'font-size': fontSize + '%' });
                 triggerCardElem.find('.alert-list-title').css({ 'font-size': fontSize + '%' });
-                triggerCardElem.find('.alert-list-text').css({ 'font-size': fontSize * 0.8 + '%' });
+                triggerCardElem.find('.alert-list-text').css({ 'font-size': fontSize * 0.7 + '%' });
               } else {
                 // remove css
-                triggerCardElem.find('.alert-list-icon').css({ 'font-size': fontSize + '%' });
+                triggerCardElem.find('.alert-list-icon').css({ 'font-size': '' });
+                triggerCardElem.find('.alert-list-title').css({ 'font-size': '' });
+                triggerCardElem.find('.alert-list-text').css({ 'font-size': '' });
               }
             }
 
@@ -530,9 +575,9 @@ System.register(['lodash', 'jquery', 'moment', '../datasource-zabbix/utils', 'ap
               var rootElem = elem.find('.triggers-panel-scroll');
               var footerElem = elem.find('.triggers-panel-footer');
               appendPaginationControls(footerElem);
-              setFontSize();
               rootElem.css({ 'max-height': getContentHeight() });
               rootElem.css({ 'height': getContentHeight() });
+              setFontSize();
               ctrl.renderingCompleted();
             }
 
@@ -543,7 +588,7 @@ System.register(['lodash', 'jquery', 'moment', '../datasource-zabbix/utils', 'ap
               unbindDestroy();
             });
 
-            ctrl.events.on('render', function (renderData) {
+            function onRender(renderData) {
               if (renderData) {
                 renderData = _.map(renderData, ctrl.formatTrigger.bind(ctrl));
                 data = renderData;
@@ -554,8 +599,13 @@ System.register(['lodash', 'jquery', 'moment', '../datasource-zabbix/utils', 'ap
               if (data) {
                 ctrl.triggerList = data;
                 ctrl.getCurrentTriggersPage();
-                renderPanel();
               }
+              renderPanel();
+            }
+
+            ctrl.events.on('render', function (renderData) {
+              // onRender(renderData);
+              renderPanel();
             });
           }
         }]);

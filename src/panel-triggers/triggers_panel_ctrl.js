@@ -67,6 +67,7 @@ export class TriggerPanelCtrl extends PanelCtrl {
     this.templateSrv = templateSrv;
     this.contextSrv = contextSrv;
     this.dashboardSrv = dashboardSrv;
+    this.scope = $scope;
 
     this.editorTabIndex = 1;
     this.triggerStatusMap = triggerStatusMap;
@@ -141,7 +142,6 @@ export class TriggerPanelCtrl extends PanelCtrl {
 
       // Limit triggers number
       this.triggerList = triggerList.slice(0, this.panel.limit);
-      this.getCurrentTriggersPage();
       this.render(this.triggerList);
     })
     .catch(err => {
@@ -166,6 +166,22 @@ export class TriggerPanelCtrl extends PanelCtrl {
       this.events.emit('data-error', err);
       console.log('Panel data error:', err);
     });
+  }
+
+  render(triggerList) {
+    let triggers = this.triggerList;
+
+    if (triggerList) {
+      triggers = _.map(triggers, this.formatTrigger.bind(this));
+    } else {
+      triggers = _.map(triggers, this.updateTriggerFormat.bind(this));
+    }
+    triggers = this.sortTriggers(triggers);
+    this.triggerList = triggers;
+    this.getCurrentTriggersPage();
+    // this.scope.$digest();
+
+    return super.render(this.triggerList);
   }
 
   getTriggers() {
@@ -410,13 +426,16 @@ export class TriggerPanelCtrl extends PanelCtrl {
     function setFontSize() {
       const fontSize = parseInt(panel.fontSize.slice(0, panel.fontSize.length - 1));
       let triggerCardElem = elem.find('.card-item-wrapper');
+      console.log(fontSize);
       if (fontSize && fontSize !== 100) {
         triggerCardElem.find('.alert-list-icon').css({'font-size': fontSize + '%'});
         triggerCardElem.find('.alert-list-title').css({'font-size': fontSize + '%'});
-        triggerCardElem.find('.alert-list-text').css({'font-size': fontSize * 0.8 + '%'});
+        triggerCardElem.find('.alert-list-text').css({'font-size': fontSize * 0.7 + '%'});
       } else {
         // remove css
-        triggerCardElem.find('.alert-list-icon').css({'font-size': fontSize + '%'});
+        triggerCardElem.find('.alert-list-icon').css({'font-size': ''});
+        triggerCardElem.find('.alert-list-title').css({'font-size': ''});
+        triggerCardElem.find('.alert-list-text').css({'font-size': ''});
       }
     }
 
@@ -424,9 +443,9 @@ export class TriggerPanelCtrl extends PanelCtrl {
       let rootElem = elem.find('.triggers-panel-scroll');
       let footerElem = elem.find('.triggers-panel-footer');
       appendPaginationControls(footerElem);
-      setFontSize();
       rootElem.css({'max-height': getContentHeight()});
       rootElem.css({'height': getContentHeight()});
+      setFontSize();
       ctrl.renderingCompleted();
     }
 
@@ -437,7 +456,7 @@ export class TriggerPanelCtrl extends PanelCtrl {
       unbindDestroy();
     });
 
-    ctrl.events.on('render', (renderData) => {
+    function onRender(renderData)  {
       if (renderData) {
         renderData = _.map(renderData, ctrl.formatTrigger.bind(ctrl));
         data = renderData;
@@ -448,8 +467,13 @@ export class TriggerPanelCtrl extends PanelCtrl {
       if (data) {
         ctrl.triggerList = data;
         ctrl.getCurrentTriggersPage();
-        renderPanel();
       }
+      renderPanel();
+    }
+
+    ctrl.events.on('render', (renderData) => {
+      // onRender(renderData);
+      renderPanel();
     });
   }
 }
